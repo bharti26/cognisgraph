@@ -21,11 +21,10 @@ wheels/
 *.egg
 
 # Virtual Environment
-venv/
-ENV/
-env/
 cognisgraph_venv/
 cognisgraph_venv_new/
+venv/
+ENV/
 
 # IDE
 .idea/
@@ -37,9 +36,17 @@ cognisgraph_venv_new/
 .DS_Store
 Thumbs.db
 
+# Application specific
+Ollama-darwin.zip
+Ollama.app/
+*.log
+.env
+
+# Keep .streamlit config
+!.streamlit/
+
 # Project specific
 temp_uploads/
-*.log
 *.pdf
 *.csv
 *.json
