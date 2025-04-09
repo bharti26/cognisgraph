@@ -163,4 +163,47 @@ Contributions are welcome! Please follow standard fork-and-pull-request workflow
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details. 
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Streamlit Deployment
+
+To deploy this app on Streamlit:
+
+1. Fork this repository
+2. Go to [Streamlit Cloud](https://streamlit.io/cloud)
+3. Click "New app"
+4. Select your forked repository
+5. Set the following configuration:
+   - Main file path: `streamlit_app.py`
+   - Python version: 3.8 or higher
+   - Requirements file: `requirements_streamlit.txt`
+
+## Local Development
+
+1. Clone the repository
+2. Create a virtual environment:
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   ```
+3. Install dependencies:
+   ```bash
+   pip install -r requirements_streamlit.txt
+   ```
+4. Run the app:
+   ```bash
+   streamlit run streamlit_app.py
+   ```
+
+## Project Structure
+
+- `src/cognisgraph/`: Main package code
+- `src/cognisgraph/core/`: Core functionality
+- `src/cognisgraph/ui/`: Streamlit UI components
+- `src/cognisgraph/xai/`: Explainable AI features
+- `tests/`: Test files
+- `examples/`: Example usage scripts
+
+## License
+
+MIT License 
