@@ -6,11 +6,11 @@ textColor = "#262730"
 font = "sans serif"
 
 [server]
-enableCORS = false
-enableXsrfProtection = false
+enableCORS = "false"
+enableXsrfProtection = "false"
 maxUploadSize = 500
 fileWatcherType = "none"
-headless = true
+headless = "true"
 
 [browser]
-gatherUsageStats = false 
+gatherUsageStats = "false" 
