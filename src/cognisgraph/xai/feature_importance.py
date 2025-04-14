@@ -1,8 +1,10 @@
+"""Feature importance analysis module."""
+
 from typing import Dict, Any, List, Optional, Tuple
 import networkx as nx
 import logging
 from datetime import datetime
-from ..core.knowledge_store import KnowledgeStore
+from cognisgraph.core.knowledge_store import KnowledgeStore
 
 logger = logging.getLogger(__name__)
 

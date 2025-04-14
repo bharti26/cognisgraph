@@ -1,4 +1,4 @@
-from cognisgraph import CognisGraph
+from core import CognisGraph
 
 def main():
     # Initialize CognisGraph

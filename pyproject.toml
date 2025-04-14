@@ -5,34 +5,47 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "cognisgraph"
 version = "0.1.0"
-description = "CognisGraph: A knowledge graph platform (placeholder description)"
-readme = "README.md"  # Assuming you have or will create a README.md
-requires-python = ">=3.8"
+description = "A knowledge graph system for cognitive computing"
+authors = [
+    {name = "bharti goel", email = "bhartigoel0812@gmail.com"}
+]
 dependencies = [
     "networkx>=3.0",
-    "numpy>=1.23.5,<2.0.0",
-    "pandas>=1.3.0",
-    "pydantic>=2.5.0",
-    "rich>=13.7.0",
-    "matplotlib>=3.8.0",
-    "pyvis>=0.3.2",
-    "graphviz>=0.20.1",
-    "scikit-learn>=1.0.0",
-    "plotly>=5.13.0",
-    "streamlit>=1.44.0",
-    "torch>=2.1.0",
-    "protobuf>=3.20.3,<5.0.0",
-    "sentence-transformers>=2.2.2",
+    "pandas>=2.0",
+    "numpy>=1.24",
+    "scikit-learn>=1.3",
+    "torch>=2.0",
+    "transformers>=4.30",
+    "langchain>=0.1",
     "langgraph>=0.0.10",
-    "watchdog>=3.0.0",
-    "PyPDF2>=3.0.0",
-    "spacy>=3.7.2",
-    "nltk>=3.6",
+    "streamlit>=1.25",
+    "fastapi>=0.100",
+    "uvicorn>=0.23",
+    "pydantic>=2.0",
+    "python-dotenv>=1.0",
+    "tqdm>=4.65",
+    "matplotlib>=3.7",
+    "seaborn>=0.12",
+    "plotly>=5.15",
+    "pyvis>=0.3",
+    "spacy>=3.7",
+    "nltk>=3.8",
+    "gensim>=4.3",
+    "scipy>=1.11",
+    "pytest>=7.4",
+    "pytest-cov>=4.1",
+    "black>=23.7",
+    "isort>=5.12",
+    "flake8>=6.1",
+    "mypy>=1.5"
 ]
+requires-python = ">=3.9"
+readme = "README.md"
+license = {text = "MIT"}
 
 [project.urls]
-"Homepage" = "https://github.com/yourusername/cognisgraph"  # Replace with your actual URL
-"Bug Tracker" = "https://github.com/yourusername/cognisgraph/issues" # Replace with your actual URL
+Homepage = "https://github.com/bharti26/cognisgraph"
+Repository = "https://github.com/bharti26/cognisgraph.git"
 
 [project.optional-dependencies]
 dev = [
@@ -42,5 +55,73 @@ dev = [
     # Add other development dependencies here
 ]
 
-[tool.setuptools.packages.find]
-where = ["src"]  # Matches your setup.py package_dir 
+[tool.setuptools]
+package-dir = {"" = "src"}
+packages = [
+    "cognisgraph",
+    "cognisgraph.core",
+    "cognisgraph.nlp",
+    "cognisgraph.agents",
+    "cognisgraph.ui",
+    "cognisgraph.visualization",
+    "cognisgraph.xai",
+    "cognisgraph.utils"
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-v --cov=cognisgraph --cov-report=term-missing"
+
+[tool.black]
+line-length = 88
+target-version = ["py39"]
+include = '\.pyi?$'
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+include_trailing_comma = true
+force_grid_wrap = 0
+use_parentheses = true
+ensure_newline_before_comments = true
+line_length = 88
+
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+
+[[tool.mypy.overrides]]
+module = [
+    "streamlit.*",
+    "fastapi.*",
+    "uvicorn.*",
+    "pydantic.*",
+    "langchain.*",
+    "langgraph.*",
+    "transformers.*",
+    "torch.*",
+    "numpy.*",
+    "pandas.*",
+    "networkx.*",
+    "scikit-learn.*",
+    "matplotlib.*",
+    "seaborn.*",
+    "plotly.*",
+    "pyvis.*",
+    "spacy.*",
+    "nltk.*",
+    "gensim.*",
+    "scipy.*"
+]
+ignore_missing_imports = true 

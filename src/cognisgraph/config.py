@@ -1,5 +1,6 @@
 from typing import Dict, Any, Optional
 from pydantic import BaseModel, Field
+from dataclasses import dataclass, field
 
 class VisualizationConfig(BaseModel):
     """Configuration for visualization settings."""
@@ -38,4 +39,54 @@ class CognisGraphConfig(BaseModel):
         """Create a configuration from a dictionary."""
         if config_dict is None:
             return cls()
-        return cls(**config_dict) 
+        return cls(**config_dict)
+
+@dataclass
+class Config:
+    """Configuration class for CognisGraph."""
+    
+    log_level: str = "INFO"
+    log_file: Optional[str] = None
+    debug: bool = False
+    
+    @classmethod
+    def from_dict(cls, config: Optional[Dict[str, Any]] = None) -> 'Config':
+        """Create a Config instance from a dictionary.
+        
+        Args:
+            config: Configuration dictionary
+            
+        Returns:
+            Config instance
+        """
+        if config is None:
+            return cls()
+        
+        return cls(
+            log_level=config.get("log_level", "INFO"),
+            log_file=config.get("log_file"),
+            debug=config.get("debug", False)
+        )
+    
+    def get(self, key: str, default: Any = None) -> Any:
+        """Get a configuration value.
+        
+        Args:
+            key: Configuration key
+            default: Default value if key not found
+            
+        Returns:
+            Configuration value
+        """
+        return getattr(self, key, default)
+    
+    def __getitem__(self, key: str) -> Any:
+        """Get a configuration value using dictionary access.
+        
+        Args:
+            key: Configuration key
+            
+        Returns:
+            Configuration value
+        """
+        return getattr(self, key) 

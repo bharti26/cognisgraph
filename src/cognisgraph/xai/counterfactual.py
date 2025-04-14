@@ -1,7 +1,8 @@
-from typing import Dict, Any, List, Optional
+"""Counterfactual explanation module."""
+
+from typing import Dict, Any, List, Optional, Tuple
 import networkx as nx
 import random
-from ..core.knowledge_store import KnowledgeStore
 import logging
 
 logger = logging.getLogger(__name__)

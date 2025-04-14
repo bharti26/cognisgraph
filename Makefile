@@ -1,59 +1,44 @@
 # Makefile for cognisgraph project
 
-# Project Variables
+# Project variables
 PROJECT_NAME := cognisgraph
-VENV_NAME := cognisgraph_venv_new
+VENV_NAME := cognisgraph_venv
 PYTHON := $(VENV_NAME)/bin/python
 PIP := $(VENV_NAME)/bin/pip
-SRC_DIR := src/$(PROJECT_NAME)
 
-.PHONY: help install clean run test
+.PHONY: help install test run clean
 
 help:
-	@echo "Available commands:"
-	@echo "  install      : Creates a virtual environment $(VENV_NAME) and installs dependencies."
-	@echo "  run          : Runs the Streamlit application."
-	@echo "  test         : Runs the pytest test suite."
-	@echo "  clean        : Removes the virtual environment $(VENV_NAME) and __pycache__ directories."
+	@echo "Available targets:"
+	@echo "  install    - Create virtual environment and install dependencies"
+	@echo "  test       - Run test suite"
+	@echo "  run        - Run Streamlit app"
+	@echo "  clean      - Remove virtual environment and cache files"
 
-# Default target (optional, can be useful)
-all: install
-
-# Install project dependencies
-install: $(VENV_NAME)/bin/activate
-	@echo "Installing dependencies from requirements.txt into $(VENV_NAME)..."
+install:
+	@echo "Creating virtual environment..."
+	python3.11 -m venv $(VENV_NAME)
+	@echo "Installing dependencies..."
 	$(PIP) install --upgrade pip
 	$(PIP) install -r requirements.txt
-	@echo "Installing project in editable mode..."
-	$(PIP) install -e .
-	@echo "Installation complete."
+	@echo "Installation complete!"
 
-# Rule to ensure the virtual environment exists
-$(VENV_NAME)/bin/activate:
-	@echo "Checking virtual environment $(VENV_NAME)..."
-	@if [ ! -d "$(VENV_NAME)" ]; then \
-		echo "Creating virtual environment $(VENV_NAME)..."; \
-		python3 -m venv $(VENV_NAME); \
-	else \
-		echo "Virtual environment $(VENV_NAME) already exists."; \
-	fi
-	@touch $(VENV_NAME)/bin/activate # Ensure timestamp updates
-	@echo "Virtual environment ready."
-
-# Run tests
 test:
-	@echo "Running pytest test suite in $(VENV_NAME)..."
+	@echo "Running tests..."
 	$(PYTHON) -m pytest
 
-# Run Streamlit application
 run:
-	@echo "Starting the CognisGraph Streamlit app using $(VENV_NAME)..."
-	$(VENV_NAME)/bin/streamlit run $(SRC_DIR)/ui/app.py --server.fileWatcherType none
+	@echo "Starting Streamlit app..."
+	$(PYTHON) -m streamlit run src/cognisgraph/ui/app.py
 
-# Clean up build artifacts and venv
 clean:
-	@echo "Cleaning up $(VENV_NAME)..."
-	rm -rf $(VENV_NAME)
-	find . -type f -name '*.pyc' -delete
-	find . -type d -name '__pycache__' -exec rm -rf {} +
-	@echo "Cleanup complete."
+	@echo "Cleaning up..."
+	# rm -rf $(VENV_NAME)
+	find . -type d -name "__pycache__" -exec rm -rf {} +
+	find . -type f -name "*.pyc" -delete
+	find . -type f -name "*.pyo" -delete
+	find . -type f -name "*.pyd" -delete
+	find . -type d -name "*.egg-info" -exec rm -rf {} +
+	find . -type d -name ".pytest_cache" -exec rm -rf {} +
+	find . -type d -name ".mypy_cache" -exec rm -rf {} +
+	@echo "Cleanup complete!"

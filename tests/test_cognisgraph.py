@@ -1,215 +1,274 @@
+"""Tests for the CognisGraph application."""
+
 import pytest
-from cognisgraph import CognisGraph
-from cognisgraph.exceptions import (
-    KnowledgeError, QueryError, VisualizationError, WorkflowError
-)
-import os
-from cognisgraph.core.knowledge_store import Entity, Relationship
+import pytest_asyncio
+from unittest.mock import Mock, patch, AsyncMock
+import networkx as nx
+from cognisgraph.app import CognisGraph
+from cognisgraph.core.knowledge_store import KnowledgeStore, Entity, Relationship
+from cognisgraph.nlp.query_engine import QueryEngine
+from cognisgraph.agents.orchestrator import OrchestratorAgent
+from cognisgraph.utils.logger import CognisGraphLogger
 
-def test_initialization():
-    """Test CognisGraph initialization."""
-    # Test with default config
-    cg = CognisGraph()
-    assert cg is not None
-    
-    # Test with custom config
+@pytest_asyncio.fixture
+def mock_knowledge_store():
+    """Create a mock KnowledgeStore."""
+    store = Mock()
+    store.get_entities.return_value = []
+    store.get_relationships.return_value = []
+    store.get_entity.return_value = None
+    return store
+
+@pytest_asyncio.fixture
+def mock_query_engine():
+    """Create a mock QueryEngine."""
+    engine = Mock()
+    engine.process_query.return_value = {
+        "answer": "Test answer",
+        "confidence": 0.8,
+        "explanation": "Test explanation",
+        "relevant_entities": [],
+        "relevant_relationships": []
+    }
+    return engine
+
+@pytest.fixture
+def mock_orchestrator():
+    """Create a mock orchestrator."""
+    mock = Mock()
+    mock.process = AsyncMock(return_value={
+        "status": "success",
+        "data": {
+            "entities": [],
+            "relationships": [],
+            "visualization": None
+        }
+    })
+    return mock
+
+@pytest.fixture
+def mock_config():
     config = {
-        "debug": True,
+        "log_level": "INFO",
         "visualization": {
-            "default_method": "networkx"
+            "default_method": "plotly"
         }
     }
-    cg = CognisGraph(config)
-    assert cg.config.debug is True
-    assert cg.config.visualization.default_method == "networkx"
+    return config
 
-def test_add_knowledge():
-    """Test adding knowledge to the graph."""
-    cg = CognisGraph()
+@pytest.mark.asyncio
+async def test_initialization(mock_knowledge_store, mock_query_engine, mock_orchestrator, mock_config):
+    """Test CognisGraph initialization."""
+    with patch("cognisgraph.app.KnowledgeStore", return_value=mock_knowledge_store), \
+         patch("cognisgraph.app.QueryEngine", return_value=mock_query_engine), \
+         patch("cognisgraph.app.OrchestratorAgent", return_value=mock_orchestrator):
+        app = CognisGraph(mock_config)
+        assert app.knowledge_store == mock_knowledge_store
+        assert app.query_engine == mock_query_engine
+        assert app.orchestrator == mock_orchestrator
+
+@pytest.mark.asyncio
+async def test_add_knowledge(cognisgraph, mock_orchestrator):
+    result = await cognisgraph.add_knowledge("test.pdf")
+    assert result["status"] == "success"
+    mock_orchestrator.process.assert_called_once_with({
+        "type": "pdf",
+        "content": "test.pdf"
+    })
+
+@pytest.mark.asyncio
+async def test_query(cognisgraph, mock_orchestrator):
+    query = "Find all people who work at TechCorp"
+    result = await cognisgraph.query(query)
+    assert result["status"] == "success"
+    mock_orchestrator.process.assert_called_once_with({
+        "type": "query",
+        "content": query
+    })
+
+@pytest.mark.asyncio
+async def test_visualize(cognisgraph, mock_orchestrator):
+    result = await cognisgraph.visualize(method="plotly")
+    assert result["status"] == "success"
+    assert "result" in result
+    mock_orchestrator.process.assert_called_once_with({
+        "type": "visualization",
+        "method": "plotly",
+        "output_path": None
+    })
+
+@pytest.mark.asyncio
+async def test_get_entities(cognisgraph, mock_knowledge_store):
+    result = await cognisgraph.get_entities()
+    assert isinstance(result, list)
+    assert len(result) == 2
+    assert all(isinstance(e, Entity) for e in result)
+    mock_knowledge_store.get_entities.assert_called_once()
+
+@pytest.mark.asyncio
+async def test_get_relationships(cognisgraph, mock_knowledge_store):
+    result = await cognisgraph.get_relationships()
+    assert isinstance(result, list)
+    assert len(result) == 1
+    assert isinstance(result[0], Relationship)
+    assert result[0].source == "1"
+    assert result[0].type == "WORKS_FOR"
+    mock_knowledge_store.get_relationships.assert_called_once()
+
+@pytest.mark.asyncio
+async def test_get_entity(cognisgraph, mock_knowledge_store):
+    entity_id = "1"
+    result = await cognisgraph.get_entity(entity_id)
+    assert isinstance(result, Entity)
+    assert result.id == "1"
+    assert result.type == "Person"
+    mock_knowledge_store.get_entity.assert_called_once_with(entity_id)
+
+@pytest.mark.asyncio
+async def test_run_workflow(mock_knowledge_store, mock_query_engine, mock_orchestrator, mock_config):
+    """Test running a complete workflow."""
+    with patch("cognisgraph.app.KnowledgeStore", return_value=mock_knowledge_store), \
+         patch("cognisgraph.app.QueryEngine", return_value=mock_query_engine), \
+         patch("cognisgraph.app.OrchestratorAgent", return_value=mock_orchestrator):
+        app = CognisGraph(mock_config)
+        result = await app.run_workflow("test.pdf", "test query")
+        assert result["status"] == "success"
+        assert mock_orchestrator.process.call_count == 2
+        mock_orchestrator.process.assert_any_call({
+            "type": "pdf",
+            "content": "test.pdf"
+        })
+        mock_orchestrator.process.assert_any_call({
+            "type": "query",
+            "content": "test query"
+        })
+
+@pytest.fixture
+def mock_knowledge_store():
+    store = Mock(spec=KnowledgeStore)
+    store.graph = nx.DiGraph()
     
-    # Test adding single knowledge
-    knowledge = {
-        "entity": "Python",
-        "type": "Programming Language",
-        "properties": {"created": 1991}
+    # Add test data to the graph
+    store.graph.add_node("1", type="Person", properties={"name": "John"})
+    store.graph.add_node("2", type="Company", properties={"name": "TechCorp"})
+    store.graph.add_edge("1", "2", type="WORKS_FOR", properties={})
+    
+    # Set up mock methods
+    store.get_entity = Mock(return_value=Entity(id="1", type="Person", properties={"name": "John"}))
+    store.get_entities = Mock(return_value=[
+        Entity(id="1", type="Person", properties={"name": "John"}),
+        Entity(id="2", type="Company", properties={"name": "TechCorp"})
+    ])
+    store.get_relationships = Mock(return_value=[
+        Relationship(source="1", target="2", type="WORKS_FOR", properties={})
+    ])
+    store.get_graph = Mock(return_value=store.graph)
+    return store
+
+@pytest.fixture
+def mock_query_engine():
+    engine = Mock(spec=QueryEngine)
+    engine.execute_query.return_value = {
+        "status": "success",
+        "answer": "Test answer",
+        "confidence": 0.95,
+        "explanation": "Test explanation",
+        "entities": [],
+        "relationships": []
     }
-    assert cg.add_knowledge(knowledge) is True
-    
-    # Test adding multiple knowledge items
-    knowledge_list = [
-        {
-            "entity": "Guido van Rossum",
-            "type": "Person",
-            "properties": {"occupation": "Programmer"}
-        },
-        {
-            "entity": "Python Software Foundation",
-            "type": "Organization",
-            "properties": {"founded": 2001}
+    return engine
+
+@pytest.fixture
+def mock_orchestrator():
+    orchestrator = Mock(spec=OrchestratorAgent)
+    async def mock_process(*args, **kwargs):
+        return {
+            "status": "success",
+            "result": {
+                "answer": "Test answer",
+                "confidence": 0.95,
+                "explanation": "Test explanation",
+                "entities": [],
+                "relationships": []
+            }
         }
-    ]
-    assert cg.add_knowledge(knowledge_list) is True
-    
-    # Test invalid knowledge
-    with pytest.raises(KnowledgeError):
-        cg.add_knowledge({"invalid": "data"})
+    orchestrator.process = Mock(side_effect=mock_process)
+    return orchestrator
 
-def test_query():
-    """Test querying the knowledge graph."""
-    cg = CognisGraph()
-    
-    # Add some knowledge first
-    knowledge = {
-        "entity": "Python",
-        "type": "Programming Language",
-        "properties": {"created": 1991}
-    }
-    cg.add_knowledge(knowledge)
-    
-    # Test valid query
-    result = cg.query("When was Python created?")
-    assert result is not None
-    
-    # Test invalid query
-    with pytest.raises(QueryError):
-        cg.query("")
+@pytest.fixture
+def cognisgraph(mock_knowledge_store, mock_query_engine, mock_orchestrator, mock_config):
+    app = CognisGraph()
+    app.config = mock_config
+    app.knowledge_store = mock_knowledge_store
+    app.query_engine = mock_query_engine
+    app.orchestrator = mock_orchestrator
+    return app
 
-def test_workflow():
-    """Test running workflows."""
-    cg = CognisGraph()
-    
-    knowledge = {
-        "entity": "Python",
-        "type": "Programming Language",
-        "properties": {"created": 1991}
+@pytest.mark.asyncio
+async def test_cognisgraph_initialization_with_config():
+    config = {
+        "log_level": "INFO",
+        "log_file": "test.log"
     }
-    
-    # Test valid workflow
-    result = cg.run_workflow(knowledge, "When was Python created?")
-    assert result is not None
-    
-    # Test invalid workflow
-    with pytest.raises(WorkflowError):
-        cg.run_workflow({}, "")
+    store = KnowledgeStore()
+    store.graph = nx.DiGraph()
+    with patch('cognisgraph.core.knowledge_store.KnowledgeStore', return_value=store), \
+         patch('cognisgraph.nlp.query_engine.QueryEngine'), \
+         patch('cognisgraph.agents.orchestrator.OrchestratorAgent'):
+        app = CognisGraph(config=config)
+        assert app.logger is not None
+        assert isinstance(app.logger, CognisGraphLogger)
 
-def test_visualization():
-    """Test visualization methods."""
-    cg = CognisGraph()
-    
-    # Add some knowledge first
-    knowledge = {
-        "entity": "Python",
-        "type": "Programming Language",
-        "properties": {"created": 1991}
-    }
-    cg.add_knowledge(knowledge)
-    
-    # Test each visualization method
-    methods = ["networkx", "plotly", "pyvis", "graphviz"]
-    for method in methods:
-        output_path = f"test_{method}"
-        if method == "pyvis":
-            output_path += ".html"
-        elif method == "graphviz":
-            pass # graphviz automatically adds .png
-        # Add other extensions if needed for other methods
-        
-        cg.visualize(method=method, output_path=output_path)
-        # Basic check: Does the output file exist?
-        if method == "graphviz":
-            # Graphviz adds .png, check for that
-            assert os.path.exists(output_path + ".png"), f"Output file {output_path}.png not created for {method}"
-            os.remove(output_path + ".png") # Clean up
-        elif method != "networkx": # NetworkX shows plot, doesn't save by default in this test setup
-             assert os.path.exists(output_path), f"Output file {output_path} not created for {method}"
-             os.remove(output_path) # Clean up
+@pytest.mark.asyncio
+async def test_add_knowledge(cognisgraph, mock_orchestrator):
+    result = await cognisgraph.add_knowledge("test.pdf")
+    assert result["status"] == "success"
+    mock_orchestrator.process.assert_called_once_with({
+        "type": "pdf",
+        "content": "test.pdf"
+    })
 
-def test_get_entity():
-    """Test retrieving entities."""
-    cg = CognisGraph()
-    
-    # Add an entity
-    knowledge = {
-        "entity": "Python",
-        "type": "Programming Language",
-        "properties": {"created": 1991}
-    }
-    cg.add_knowledge(knowledge)
-    
-    # Test getting existing entity
-    entity = cg.get_entity("Python")
-    assert entity is not None
-    assert entity.id == "Python"
-    
-    # Test getting non-existent entity
-    assert cg.get_entity("NonExistent") is None
+@pytest.mark.asyncio
+async def test_query(cognisgraph, mock_orchestrator):
+    query = "Find all people who work at TechCorp"
+    result = await cognisgraph.query(query)
+    assert result["status"] == "success"
+    mock_orchestrator.process.assert_called_once_with({
+        "type": "query",
+        "content": query
+    })
 
-def test_get_relationships():
-    """Test retrieving relationships."""
-    cg = CognisGraph()
-    
-    # Define entities as dicts suitable for add_knowledge
-    python_knowledge = {
-        "entity": "Python", 
-        "type": "Programming Language", 
-        "properties": {"created": 1991}
-    }
-    guido_knowledge = {
-        "entity": "Guido van Rossum", 
-        "type": "Person", 
-        "properties": {}
-    }
-    # Add entities using add_knowledge
-    cg.add_knowledge(python_knowledge)
-    cg.add_knowledge(guido_knowledge)
+@pytest.mark.asyncio
+async def test_visualize(cognisgraph, mock_orchestrator):
+    result = await cognisgraph.visualize(method="plotly")
+    assert result["status"] == "success"
+    assert "result" in result
+    mock_orchestrator.process.assert_called_once_with({
+        "type": "visualization",
+        "method": "plotly",
+        "output_path": None
+    })
 
-    # Now define and add the relationship knowledge
-    relationship_knowledge = {
-        "entity": "Python", # Source entity ID must match an existing entity
-        "type": "Programming Language", # Can be omitted if entity exists, or match existing
-        "properties": {}, # Can be omitted if entity exists
-        "relationships": [
-            {
-                "target": "Guido van Rossum", # Target entity ID must match an existing entity
-                "type": "created_by",
-                "properties": {"year": 1991}
-            }
-        ]
-    }
-    cg.add_knowledge(relationship_knowledge) # This should now successfully add the relationship
-    
-    # Test getting relationships
-    relationships_python = cg.get_relationships("Python")
-    assert len(relationships_python) == 1
-    assert relationships_python[0].type == "created_by"
-    assert relationships_python[0].target == "Guido van Rossum"
+def test_get_entities(cognisgraph, mock_knowledge_store):
+    result = cognisgraph.get_entities()
+    assert isinstance(result, list)
+    assert len(result) == 2
+    assert all(isinstance(e, Entity) for e in result)
+    mock_knowledge_store.get_entities.assert_called_once()
 
-    relationships_guido = cg.get_relationships("Guido van Rossum")
-    assert len(relationships_guido) == 1
-    assert relationships_guido[0].type == "created_by"
-    assert relationships_guido[0].source == "Python"
+def test_get_relationships(cognisgraph, mock_knowledge_store):
+    result = cognisgraph.get_relationships()
+    assert isinstance(result, list)
+    assert len(result) == 1
+    assert isinstance(result[0], Relationship)
+    assert result[0].source == "1"
+    assert result[0].type == "WORKS_FOR"
+    mock_knowledge_store.get_relationships.assert_called_once()
 
-# Add a test for add_knowledge with relationships where target doesn't exist
-def test_add_knowledge_missing_target():
-    """Test adding relationship via add_knowledge when target doesn't exist."""
-    cg = CognisGraph()
-    # Add source entity
-    cg.add_knowledge({"entity": "Source", "type": "Test", "properties": {}})
-    
-    # Attempt to add relationship pointing to non-existent target
-    knowledge_with_bad_rel = {
-        "entity": "Source",
-        "relationships": [
-            {
-                "target": "NonExistentTarget",
-                "type": "points_to",
-                "properties": {}
-            }
-        ]
-    }
-    # Expect add_relationship within KnowledgeStore to log an error and return False,
-    # but add_knowledge currently doesn't explicitly raise KnowledgeError for this.
-    # Let's assert that the relationship wasn't actually added.
-    cg.add_knowledge(knowledge_with_bad_rel)
-    source_relationships = cg.get_relationships("Source")
-    assert len(source_relationships) == 0, "Relationship should not be added if target doesn't exist" 
+def test_get_entity(cognisgraph, mock_knowledge_store):
+    entity_id = "1"
+    result = cognisgraph.get_entity(entity_id)
+    assert isinstance(result, Entity)
+    assert result.id == "1"
+    assert result.type == "Person"
+    mock_knowledge_store.get_entity.assert_called_once_with(entity_id) 

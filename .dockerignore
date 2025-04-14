@@ -1,0 +1,64 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+ENV/
+cognisgraph_venv/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Testing
+.coverage
+.pytest_cache/
+tests/
+.tox/
+
+# Logs
+logs/
+*.log
+
+# Temporary files
+temp_uploads/
+.DS_Store
+*.tmp
+*.bak
+*.swp
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# Other
+.env
+.envrc
+*.db
+*.sqlite3 

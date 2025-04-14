@@ -1,209 +1,257 @@
-# CognisGraph: Knowledge Graph Library with Explainable AI
+# CognisGraph
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-
-CognisGraph is a Python library designed for building, managing, and querying knowledge graphs. It integrates various components for data parsing, storage, querying, explainable AI (XAI), and visualization, making it easier to work with structured and unstructured knowledge.
+A powerful knowledge graph system with Explainable AI (XAI) features, built with Python.
 
 ## Features
 
-*   **Knowledge Store:** Core component using NetworkX for graph storage and management (Entities, Relationships).
-*   **Entity/Relationship Modeling:** Pydantic models for defining entities and relationships with properties.
-*   **Query Engine:** Processes natural language queries using sentence embeddings (Sentence Transformers) to find relevant information.
-*   **LLM-Powered Answers (Optional):** Generates natural language answers based on graph evidence using a local LLM (via Ollama integration - currently uses a placeholder).
-*   **Parsers:** Includes a PDF parser (`PyPDF2`, NLTK) to extract entities and relationships from documents.
-*   **Explainable AI (XAI):** Provides insights into query results and graph structure:
-    *   Saliency Analysis (Centrality, Community Roles - placeholders)
-    *   Feature Importance Analysis (placeholder)
-    *   Counterfactual Explanations (placeholder)
-    *   Rule Extraction (placeholder)
-*   **Visualization:** Supports multiple backends (Matplotlib, Plotly, PyVis, Graphviz) for graph visualization.
-*   **Streamlit UI:** An interactive web application for exploring the graph, querying, adding data, and viewing explanations.
+- **Knowledge Store**: Efficient storage and retrieval of entities and relationships
+- **Entity/Relationship Modeling**: Flexible data model for complex knowledge representation
+- **Advanced Query Engine**: 
+  - Natural language processing with LLaMA2 integration
+  - Robust error handling and response validation
+  - Parallel relationship processing
+  - Intelligent response caching
+- **Parsers**: Support for PDF and other document formats
+- **Explainable AI (XAI)**:
+  - Saliency analysis with graph centrality metrics
+  - Feature importance with parallel processing
+  - Counterfactual explanations
+  - Rule extraction
+  - Detailed confidence scoring
+- **Multi-Agent Architecture**:
+  - Query Agent with enhanced response handling
+  - PDF Processing Agent with robust error management
+  - Visualization Agent for graph rendering
+  - Base Agent providing core functionality
+- **Visualization**: Multiple layout options for graph visualization
+- **Streamlit UI**: User-friendly interface for interaction
 
 ## Installation
 
-1.  **Clone the repository:**
-    ```bash
-    git clone https://github.com/your-username/cognisgraph.git # Replace with your repo URL
-    cd cognisgraph
-    ```
+### Prerequisites
 
-2.  **Set up Virtual Environment & Install Dependencies using Makefile:**
-    The easiest way is to use the provided Makefile:
-    ```bash
-    make install
-    ```
-    This command will:
-    *   Create a Python virtual environment named `cognisgraph_venv_new` (if it doesn't exist).
-    *   Install all required dependencies from `requirements.txt` into the virtual environment.
-    *   Install the `cognisgraph` package itself in editable mode (`-e .`).
+- Python 3.8 or higher
+- pip (Python package installer)
+- Docker and Docker Compose (optional, for containerized deployment)
 
-3.  **Download NLTK Data (Required for PDF Parser):**
-    Run the following Python command (ideally within the activated venv) to download necessary NLTK models:
-    ```python
-    # Activate venv first: source cognisgraph_venv_new/bin/activate 
-    python -c "import nltk; nltk.download('punkt'); nltk.download('averaged_perceptron_tagger'); nltk.download('maxent_ne_chunker'); nltk.download('words'); nltk.download('punkt_tab'); nltk.download('averaged_perceptron_tagger_eng'); nltk.download('maxent_ne_chunker_tab')" 
-    ```
-    *(The PDF parser will also attempt to download these on first use if missing, but pre-downloading is recommended.)*
+### Setup
 
-4.  **Install Ollama for Local LLM Answers (Optional):**
-    To enable natural language answer generation using a local LLM:
-    *   **Install Ollama:** Download and install from [https://ollama.com/](https://ollama.com/). Follow the instructions for your OS (macOS, Windows, Linux). Ensure the Ollama application/service is running in the background.
-    *   **Download a Model:** Open your terminal and pull a recommended small model like Phi-3:
-        ```bash
-        ollama pull phi3
-        ```
-        *(Other models like `mistral` or `llama3` can be used if you have sufficient hardware, primarily GPU VRAM.)*
-    *   **Verify Python Dependency:** Ensure the `requests` library is installed (it should be included in `requirements.txt`).
+1. Clone the repository:
+```bash
+git clone https://github.com/bharti26/cognisgraph.git
+cd cognisgraph
+```
+
+2. Choose one of the following installation methods:
+
+#### Method 1: Local Installation (Recommended for Development)
+
+1. Create and activate a virtual environment:
+```bash
+python3.11 -m venv cognisgraph_venv
+source cognisgraph_venv/bin/activate  # On Windows: cognisgraph_venv\Scripts\activate
+```
+
+2. Install the package and its dependencies:
+```bash
+pip install -r requirements.txt
+```
+
+#### Method 2: Docker Installation (Recommended for Production)
+
+1. Build and start the containers:
+```bash
+docker-compose up --build
+```
+
+This will start two services:
+- API server on http://localhost:8000
+- Streamlit UI on http://localhost:8501
+
+2. To run in detached mode:
+```bash
+docker-compose up -d
+```
+
+3. To stop the services:
+```bash
+docker-compose down
+```
+
+4. To view logs:
+```bash
+docker-compose logs -f
+```
 
 ## Usage
 
 ### Running the Streamlit App
 
-1.  **Activate the virtual environment:**
-    ```bash
-    source cognisgraph_venv_new/bin/activate
-    ```
-2.  **Run using Makefile:**
-    ```bash
-    make run
-    ```
-    This starts the Streamlit application (disabling the file watcher by default). Access it via the URL provided in the terminal (usually `http://localhost:8501`).
+```bash
+streamlit run src/cognisgraph/ui/app.py
+```
 
-    *Note: If using the optional LLM integration, the first query might take longer as the local LLM loads.* 
+The app provides a user-friendly interface for:
+- Uploading and processing PDF documents
+- Querying the knowledge graph
+- Visualizing entities and relationships
+- Exploring explanations for query results
+
+### Application Entry Points
+
+The application can be run in different ways:
+
+1. **Streamlit UI**: `src/cognisgraph/ui/app.py`
+   - Full-featured web interface for interactive usage
+   - Best for exploring and visualizing the knowledge graph
+
+2. **Basic Test**: `examples/basic_test.py`
+   - Simple script demonstrating core functionality
+   - Good for quick testing of basic features
+
+3. **Example Usage**: `examples/example_usage.py`
+   - More comprehensive example showing various features
+   - Useful for understanding the API and integration
 
 ### Using the Library Programmatically
 
 ```python
-from cognisgraph import CognisGraph
+from core import CognisGraph
 
-# Initialize
-cg = CognisGraph()
+# Initialize the system
+cognis = CognisGraph()
 
-# Add Knowledge (Entity)
-knowledge_item = {
-    "entity": "New Concept",
-    "type": "Idea",
-    "properties": {"status": "initial", "created_by": "user"}
-}
-cg.add_knowledge(knowledge_item)
+# Add knowledge
+cognis.add_knowledge("Python is a programming language")
+cognis.add_knowledge("Python is used for data science")
 
-# Add Knowledge (Relationship to existing entities)
-relationship_item = {
-    "entity": "New Concept", # Source entity
-    "relationships": [
-        {
-            "target": "Python", # Assumes 'Python' entity exists
-            "type": "related_to",
-            "properties": {"context": "example"}
-        }
-    ]
-}
-cg.add_knowledge(relationship_item)
-
-# Process a Query
-query = "What is New Concept related to?"
-result = cg.process_query(query)
-print(f"Query: {query}")
-print(f"Answer: {result.answer}") 
-# The UI uses result.evidence to format a better answer / feed an LLM
-
-# Parse a PDF
-# pdf_path = "path/to/your/document.pdf"
-# cg.parse_pdf(pdf_path) # Adds extracted knowledge to the main store
-
-# Get Explanations (Example)
-# if result:
-#     explanation = cg.explain_query_result(result)
-#     print("\nExplanation:", explanation)
-
-# Visualize 
-# cg.visualize(method="plotly", output_path="graph.html")
+# Process a query
+result = cognis.process_query("What is Python used for?")
+print(result)
 ```
-
-## Testing
-
-1.  **Activate the virtual environment:**
-    ```bash
-    source cognisgraph_venv_new/bin/activate
-    ```
-2.  **Run tests using Makefile:**
-    ```bash
-    make test 
-    ```
-    This executes the test suite using `pytest`.
 
 ## Project Structure
 
 ```
 cognisgraph/
-├── src/cognisgraph/             # Main source code
-│   ├── core/                    # Core components (KnowledgeStore, QueryEngine)
-│   ├── parsers/                 # Data parsers (PDFParser)
-│   ├── visualization/           # Visualization logic
-│   ├── xai/                     # Explainable AI components
-│   ├── ui/                      # Streamlit UI application (app.py)
-│   ├── utils/                   # Utility functions (logger, file watcher)
-│   ├── __init__.py              # Package initialization
-│   ├── cognisgraph.py           # Main facade class
-│   ├── config.py                # Configuration (placeholder)
-│   └── exceptions.py            # Custom exceptions
-├── tests/                       # Pytest test files
-├── examples/                    # Example usage scripts (basic_test.py)
-├── .gitignore                   # Git ignore file
-├── LICENSE                      # Project license (e.g., MIT)
-├── Makefile                     # Makefile for common tasks (install, test, run, clean)
-├── pyproject.toml               # Project metadata and build configuration
-├── README.md                    # This file
-└── requirements.txt             # Python dependencies
+├── src/
+│   └── cognisgraph/
+│       ├── core/           # Core functionality
+│       ├── parsers/        # Document parsers
+│       ├── xai/            # Explainable AI components
+│       └── ui/             # Streamlit interface
+├── tests/                  # Test suite
+├── data/                   # Sample data
+├── pyproject.toml          # Package configuration
+├── requirements.txt        # Development requirements
+└── README.md              # This file
 ```
+
+## Development
+
+### Setting Up Development Environment
+
+1. Install development dependencies:
+```bash
+pip install -e ".[dev]"
+```
+
+2. Install pre-commit hooks:
+```bash
+pre-commit install
+```
+
+### Running Tests
+
+```bash
+pytest
+```
+
+### Code Style
+
+The project uses:
+- Black for code formatting
+- isort for import sorting
+- flake8 for linting
+- mypy for type checking
 
 ## Contributing
 
-Contributions are welcome! Please follow standard fork-and-pull-request workflows. Ensure tests pass and consider adding new tests for new features.
+Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License - see the LICENSE file for details.
 
-## Streamlit Deployment
+## 🙏 Acknowledgments
 
-To deploy this app on Streamlit:
+- [NetworkX](https://networkx.org/) for graph operations
+- [PyTorch](https://pytorch.org/) for deep learning capabilities
+- [Streamlit](https://streamlit.io/) for the web interface
+- [Sentence Transformers](https://www.sbert.net/) for semantic analysis
 
-1. Fork this repository
-2. Go to [Streamlit Cloud](https://streamlit.io/cloud)
-3. Click "New app"
-4. Select your forked repository
-5. Set the following configuration:
-   - Main file path: `streamlit_app.py`
-   - Python version: 3.8 or higher
-   - Requirements file: `requirements_streamlit.txt`
+## 📞 Contact
 
-## Local Development
+For questions or support, please open an issue in the GitHub repository.
 
-1. Clone the repository
-2. Create a virtual environment:
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
-3. Install dependencies:
-   ```bash
-   pip install -r requirements_streamlit.txt
-   ```
-4. Run the app:
-   ```bash
-   streamlit run streamlit_app.py
-   ```
+## Agent System Architecture
 
-## Project Structure
+CognisGraph uses a multi-agent system architecture to handle different aspects of knowledge graph processing:
 
-- `src/cognisgraph/`: Main package code
-- `src/cognisgraph/core/`: Core functionality
-- `src/cognisgraph/ui/`: Streamlit UI components
-- `src/cognisgraph/xai/`: Explainable AI features
-- `tests/`: Test files
-- `examples/`: Example usage scripts
+### Query Agent
+- Natural language query processing
+- Intelligent response transformation
+- Robust error handling and validation
+- Features:
+  - Dual result/answer field support
+  - Confidence scoring
+  - Entity and relationship extraction
+  - Explanation generation
 
-## License
+### PDF Processing Agent
+- Specialized in processing PDF documents
+- Features:
+  - Text extraction from PDF files
+  - Entity and relationship extraction
+  - Document metadata handling
+  - Error recovery mechanisms
 
-MIT License 
+### Base Agent
+- Provides core functionality for all agents
+- Manages context and state
+- Handles logging and error management
+- Features:
+  - Shared knowledge store access
+  - Query engine integration
+  - Consistent error handling patterns
+
+### Visualization Agent
+- Graph visualization and layout
+- Interactive node/edge rendering
+- Multiple layout algorithms
+- Export capabilities
+
+## Query Engine Features
+
+The query engine provides sophisticated natural language processing:
+
+### Response Processing
+- Automatic response validation and cleaning
+- Structured explanation generation
+- Entity and relationship relevance scoring
+- Confidence calculation based on graph metrics
+
+### Performance Optimization
+- LRU caching for formatted graph data
+- Parallel relationship processing
+- Chunked data handling for large graphs
+- Response length optimization
+
+### Graph Analysis
+- Centrality metrics calculation
+  - Degree centrality
+  - Betweenness centrality
+  - Closeness centrality
+  - Eigenvector centrality with fallback
+- Entity relevance scoring
+- Relationship impact assessment 

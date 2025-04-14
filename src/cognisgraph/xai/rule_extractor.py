@@ -1,6 +1,6 @@
 from typing import Dict, List, Any
 import networkx as nx
-from ..core.knowledge_store import KnowledgeStore
+from cognisgraph.core.knowledge_store import KnowledgeStore
 
 class RuleExtractor:
     """Extracts rules and patterns from the knowledge graph."""

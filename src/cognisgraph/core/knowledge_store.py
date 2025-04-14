@@ -1,150 +1,125 @@
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, Set
 import networkx as nx
 from pydantic import BaseModel
 import logging # Import logging
+from cognisgraph.core.entity import Entity
+from cognisgraph.core.relationship import Relationship
 
 logger = logging.getLogger(__name__) # Initialize logger
 
-class Entity(BaseModel):
-    """Represents an entity node in the knowledge graph.
-    
-    Attributes:
-        id: A unique identifier for the entity.
-        type: The category or type of the entity (e.g., Person, Organization).
-        properties: A dictionary of key-value pairs describing the entity's attributes.
-    """
-    id: str
-    type: str
-    properties: Dict[str, Any]
-
-class Relationship(BaseModel):
-    """Represents a directed relationship (edge) between two entities.
-    
-    Attributes:
-        source: The ID of the source entity.
-        target: The ID of the target entity.
-        type: The type of the relationship (e.g., works_at, colleague_of).
-        properties: A dictionary of key-value pairs describing the relationship's attributes.
-    """
-    source: str
-    target: str
-    type: str
-    properties: Dict[str, Any]
-
 class KnowledgeStore:
-    """Manages the storage and retrieval of entities and relationships using NetworkX.
-    
-    Provides methods to add, retrieve, and manage graph components, including
-    indexing for efficient lookups.
-    """
+    """Stores and manages entities and relationships in a knowledge graph."""
     
     def __init__(self):
-        """Initializes an empty knowledge store with a NetworkX DiGraph and indexes."""
+        """Initialize the knowledge store."""
         self.graph = nx.DiGraph()
         self.entity_index: Dict[str, Entity] = {}
-        self.relationship_index: Dict[str, Relationship] = {}
+        self.relationship_index: Dict[str, List[Relationship]] = {}
+        logger.info("KnowledgeStore initialized with empty graph.")
     
-    def add_entity(self, entity: Entity) -> bool:
-        """Adds an entity to the knowledge graph and its index.
-
+    def add_entity(self, entity: Entity) -> None:
+        """Add an entity to the knowledge store.
+        
         Args:
-            entity: The Entity object to add.
-
-        Returns:
-            True if the entity was added successfully, False otherwise.
+            entity: The entity to add.
         """
         if not isinstance(entity, Entity):
-            logger.error(f"Attempted to add non-Entity object: {entity}")
-            return False
-        if entity.id in self.entity_index:
-            logger.warning(f"Entity with ID '{entity.id}' already exists. Skipping addition.")
-            return False # Or update logic? Decide policy.
-        try:
-            self.graph.add_node(
-                entity.id,
-                type=entity.type,
-                properties=entity.properties
-            )
-            self.entity_index[entity.id] = entity
-            logger.debug(f"Added entity: {entity.id}")
-            return True
-        except Exception as e:
-            logger.error(f"Error adding entity '{entity.id}': {e}")
-            return False
+            raise TypeError("entity must be an instance of Entity")
+            
+        self.entity_index[entity.id] = entity
+        # Add node to graph with entity properties and type
+        node_attrs = {"type": entity.type}
+        node_attrs.update(entity.properties)
+        self.graph.add_node(entity.id, **node_attrs)
+        logger.debug(f"Added entity: {entity.id}")
     
-    def add_relationship(self, relationship: Relationship) -> bool:
-        """Adds a relationship to the knowledge graph and its index.
+    def add_relationship(self, relationship: Relationship) -> None:
+        """Add a relationship to the knowledge store.
         
-        Generates a unique key for indexing based on source, type, and target.
-        Ensures source and target entities exist before adding the edge.
-
         Args:
-            relationship: The Relationship object to add.
-
-        Returns:
-            True if the relationship was added successfully, False otherwise.
+            relationship: The relationship to add.
         """
         if not isinstance(relationship, Relationship):
-            logger.error(f"Attempted to add non-Relationship object: {relationship}")
-            return False
-        if relationship.source not in self.entity_index:
-            logger.error(f"Source entity '{relationship.source}' not found for relationship.")
-            return False
-        if relationship.target not in self.entity_index:
-            logger.error(f"Target entity '{relationship.target}' not found for relationship.")
-            return False
+            raise TypeError("relationship must be an instance of Relationship")
             
-        key = f"{relationship.source}_{relationship.type}_{relationship.target}"
-        if key in self.relationship_index:
-            logger.warning(f"Relationship '{key}' already exists. Skipping addition.")
-            return False # Or update logic?
-            
-        try:
-            self.graph.add_edge(
-                relationship.source,
-                relationship.target,
-                type=relationship.type,
-                properties=relationship.properties
-            )
-            # print(f"[DEBUG store.add_relationship] Adding key: '{key}' for source: '{relationship.source}', target: '{relationship.target}'") # REMOVE DEBUG
-            self.relationship_index[key] = relationship
-            logger.debug(f"Added relationship: {key}")
-            return True
-        except Exception as e:
-            logger.error(f"Error adding relationship '{key}': {e}")
-            return False
+        # Add relationship to index
+        if relationship.source not in self.relationship_index:
+            self.relationship_index[relationship.source] = []
+        self.relationship_index[relationship.source].append(relationship)
+        
+        # Add edge to graph with relationship properties
+        self.graph.add_edge(
+            relationship.source,
+            relationship.target,
+            **relationship.properties
+        )
+        logger.debug(f"Added relationship: {relationship.source} -> {relationship.target}")
     
     def get_entity(self, entity_id: str) -> Optional[Entity]:
-        """Retrieves an entity by its ID.
-
+        """Get an entity by ID.
+        
         Args:
             entity_id: The ID of the entity to retrieve.
-
+            
         Returns:
-            The Entity object if found, otherwise None.
+            The entity if found, None otherwise.
         """
         return self.entity_index.get(entity_id)
     
-    def get_relationships(self, entity_id: str) -> List[Relationship]:
-        """Gets all relationships (incoming and outgoing) connected to an entity.
-
-        Args:
-            entity_id: The ID of the entity whose relationships are to be retrieved.
-
-        Returns:
-            A list of Relationship objects connected to the entity.
-        """
-        if entity_id not in self.entity_index:
-            logger.warning(f"Attempted to get relationships for non-existent entity: {entity_id}")
-            return []
-            
-        found_relationships = []
-        # Iterate through the relationship index directly
-        for rel in self.relationship_index.values():
-            if rel.source == entity_id or rel.target == entity_id:
-                found_relationships.append(rel)
-        return found_relationships
+    def get_entities(self) -> List[Entity]:
+        """Get all entities in the knowledge store.
         
+        Returns:
+            A list of all entities.
+        """
+        return list(self.entity_index.values())
+    
+    def get_relationships(self, source_id: Optional[str] = None) -> List[Relationship]:
+        """Get relationships from the knowledge store.
+        
+        Args:
+            source_id: Optional source entity ID to filter relationships.
+            
+        Returns:
+            A list of relationships.
+        """
+        if source_id is None:
+            relationships = []
+            for rel_list in self.relationship_index.values():
+                relationships.extend(rel_list)
+            return relationships
+        return self.relationship_index.get(source_id, [])
+    
+    def has_entity(self, entity_id: str) -> bool:
+        """Check if an entity exists in the knowledge store.
+        
+        Args:
+            entity_id: The ID of the entity to check.
+            
+        Returns:
+            True if the entity exists, False otherwise.
+        """
+        return entity_id in self.entity_index
+    
+    def has_relationship(self, source_id: str, target_id: str) -> bool:
+        """Check if a relationship exists in the knowledge store.
+        
+        Args:
+            source_id: The source entity ID.
+            target_id: The target entity ID.
+            
+        Returns:
+            True if the relationship exists, False otherwise.
+        """
+        return self.graph.has_edge(source_id, target_id)
+    
+    def clear(self) -> None:
+        """Clear all entities and relationships from the knowledge store."""
+        self.graph = nx.DiGraph()
+        self.entity_index.clear()
+        self.relationship_index.clear()
+        logger.info("KnowledgeStore cleared.")
+
     def search_entities(self, query: str, top_k: int = 5) -> List[Entity]:
         """Searches for entities based on a simple text query (placeholder).
         
@@ -167,3 +142,47 @@ class KnowledgeStore:
             if len(results) >= top_k:
                 break
         return results
+
+    def get_graph(self) -> nx.DiGraph:
+        """Returns the underlying NetworkX graph.
+        
+        Returns:
+            The NetworkX DiGraph representing the knowledge graph.
+        """
+        return self.graph
+        
+    def add_knowledge(self, knowledge: Dict[str, Any]) -> bool:
+        """Add knowledge to the store.
+        
+        Args:
+            knowledge: A dictionary containing entity and relationship information
+            
+        Returns:
+            True if the knowledge was added successfully, False otherwise
+        """
+        try:
+            # Add entity
+            entity = Entity(
+                id=knowledge["entity"],
+                type=knowledge["type"],
+                properties=knowledge.get("properties", {})
+            )
+            if not self.add_entity(entity):
+                return False
+                
+            # Add relationships if present
+            if "relationships" in knowledge:
+                for rel in knowledge["relationships"]:
+                    relationship = Relationship(
+                        source=knowledge["entity"],
+                        target=rel["target"],
+                        type=rel["type"],
+                        properties=rel.get("properties", {})
+                    )
+                    if not self.add_relationship(relationship):
+                        return False
+                        
+            return True
+        except Exception as e:
+            logger.error(f"Error adding knowledge: {str(e)}")
+            return False

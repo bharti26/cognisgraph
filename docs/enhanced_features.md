@@ -1,4 +1,69 @@
-# Enhanced CognisGraph Features
+# Enhanced Features
+
+## State Management with LangGraph
+
+The system now uses LangGraph for state management and workflow orchestration. This provides a more robust and flexible way to handle state transitions and workflow execution.
+
+```python
+from langgraph.graph import StateGraph
+from core.state_graph import CognisGraphState, CognisGraphInput, CognisGraphOutput
+from core.knowledge_store import KnowledgeStore
+from nlp.query_engine import QueryEngine
+from agents.orchestrator import Orchestrator
+from agents import BaseAgent
+from nlp.pdf_parser import PDFParser
+from visualization.visualizer import Visualizer
+from core.langgraph_workflow import CognisGraphWorkflow
+
+# Initialize components
+knowledge_store = KnowledgeStore()
+query_engine = QueryEngine()
+orchestrator = Orchestrator(knowledge_store, query_engine)
+
+# Create state graph
+state_graph = StateGraph(
+    state_schema=CognisGraphState,
+    input=CognisGraphInput,
+    output=CognisGraphOutput
+)
+
+# Process input
+input_data = {"type": "query", "content": "What are the main concepts?"}
+result = state_graph.run(input_data)
+```
+
+## Query Processing
+
+The query engine now supports more advanced query processing capabilities:
+
+```python
+# Execute a query
+result = query_engine.execute_query("What are the main concepts?")
+print(result)
+```
+
+## Knowledge Store Integration
+
+The knowledge store provides a unified interface for storing and retrieving knowledge:
+
+```python
+# Add knowledge
+knowledge_store.add_entity({"id": "test_entity", "type": "Person", "properties": {"name": "John Doe"}})
+
+# Query knowledge
+entities = knowledge_store.get_entities()
+print(entities)
+```
+
+## Orchestration
+
+The orchestrator manages the workflow between different components:
+
+```python
+# Process input through orchestrator
+result = orchestrator.process("What are the main concepts?")
+print(result)
+```
 
 ## LangGraph Integration
 
@@ -12,7 +77,7 @@ CognisGraph now includes LangGraph integration for creating and managing complex
 ### Example Usage
 
 ```python
-from cognisgraph import CognisGraph
+from core import CognisGraph
 
 # Initialize CognisGraph
 cg = CognisGraph()
@@ -35,6 +100,56 @@ query = "Who created Python?"
 
 # Run the workflow
 result = cg.run_workflow(knowledge, query)
+```
+
+## Agent System
+
+CognisGraph implements a robust multi-agent system for processing knowledge and queries:
+
+### Base Agent Architecture
+
+The system is built on an abstract `Agent` class that defines core functionality:
+- State management (IDLE, PROCESSING, VISUALIZING)
+- Context handling
+- Abstract processing interface
+
+### Specialized Agents
+
+1. **CognisGraphAgent**
+   - Main orchestrator for knowledge operations
+   - Handles both PDF processing and query execution
+   - Manages state transitions and context
+   - Integrates with KnowledgeStore and QueryEngine
+
+### Example Usage
+
+```python
+from agents import BaseAgent
+from nlp.pdf_parser import PDFParser
+from nlp.query_engine import QueryEngine
+from visualization.visualizer import Visualizer
+from core.knowledge_store import KnowledgeStore
+
+# Initialize components
+pdf_parser = PDFParser()
+query_engine = QueryEngine()
+visualizer = Visualizer()
+knowledge_store = KnowledgeStore()
+
+# Create agent
+agent = BaseAgent(
+    pdf_parser=pdf_parser,
+    query_engine=query_engine,
+    knowledge_store=knowledge_store
+)
+
+# Process PDF
+result = agent.process_pdf("document.pdf")
+print(result)
+
+# Process query
+result = agent.process_query("What is the relationship between X and Y?")
+print(result)
 ```
 
 ## Enhanced Visualization
@@ -68,7 +183,7 @@ CognisGraph now supports multiple visualization methods through the `GraphVisual
 ### Example Usage
 
 ```python
-from cognisgraph import CognisGraph
+from core import CognisGraph
 
 # Initialize CognisGraph
 cg = CognisGraph()
@@ -113,7 +228,7 @@ cg.visualize(method="graphviz", output_path="graph")    # Graphviz visualization
 You can extend the `CognisGraphWorkflow` class to add custom nodes:
 
 ```python
-from cognisgraph.core.langgraph_workflow import CognisGraphWorkflow
+from core.langgraph_workflow import CognisGraphWorkflow
 
 class CustomWorkflow(CognisGraphWorkflow):
     def _create_workflow(self):

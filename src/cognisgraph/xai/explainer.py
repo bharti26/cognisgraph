@@ -1,11 +1,11 @@
-import networkx as nx
+"""Graph explainer module."""
+
+from typing import Dict, Any, List, Tuple
 import logging
-from typing import Dict, Any, List, Optional, Tuple
-from ..core.knowledge_store import KnowledgeStore
-from ..core.query_engine import QueryResult
+from cognisgraph.core.knowledge_store import KnowledgeStore
 from .saliency import SaliencyAnalyzer
-from .counterfactual import CounterfactualExplainer
 from .feature_importance import FeatureImportanceAnalyzer
+from .counterfactual import CounterfactualExplainer
 from .rule_extractor import RuleExtractor
 
 logger = logging.getLogger(__name__)
@@ -30,69 +30,73 @@ class GraphExplainer:
         self.graph = knowledge_store.graph
         
         # Initialize analyzer components
-        self.saliency_analyzer = SaliencyAnalyzer(self.graph)
+        self.saliency_analyzer = SaliencyAnalyzer(self.knowledge_store)
         self.feature_analyzer = FeatureImportanceAnalyzer(self.knowledge_store)
         self.counterfactual_explainer = CounterfactualExplainer(self.graph)
         self.rule_extractor = RuleExtractor(self.graph)
         logger.debug("GraphExplainer initialized with analyzers.")
 
-    def explain_query_result(self, query_result: QueryResult) -> Dict[str, Any]:
-        """Generates a comprehensive explanation for a given QueryResult.
-
+    def explain_query_result(self, query_result: Dict[str, Any]) -> Dict[str, Any]:
+        """Generate explanations for a query result.
+        
         Args:
-            query_result: The QueryResult object returned by the QueryEngine.
-
+            query_result: The query result to explain
+            
         Returns:
-            A dictionary containing different types of explanations:
-            - saliency: Importance scores for nodes and paths.
-            - feature_importance: Analysis of feature relevance.
-            - counterfactuals: Potential changes affecting the result (placeholder).
-            - rules: Extracted graph patterns (placeholder).
+            A dictionary containing explanations
         """
-        if not isinstance(query_result, QueryResult):
-             raise TypeError("query_result must be an instance of QueryResult")
-             
-        logger.info(f"Generating explanation for query: '{query_result.query[:50]}...'")
-        evidence_nodes = [item['id'] for item in query_result.evidence if item['type'] == 'entity']
-        evidence_edges = [
-            (item['source'], item['target']) 
-            for item in query_result.evidence 
-            if item['type'] == 'relationship'
-        ]
-
-        explanation = {}
-
-        # --- Ensure Analyzers use the CURRENT graph --- 
-        self.saliency_analyzer.graph = self.knowledge_store.graph
-        self.feature_analyzer.graph = self.knowledge_store.graph
-        # Update other analyzers if they store self.graph
-        if hasattr(self.counterfactual_explainer, 'graph'):
-            self.counterfactual_explainer.graph = self.knowledge_store.graph
-        if hasattr(self.rule_extractor, 'graph'):
-            self.rule_extractor.graph = self.knowledge_store.graph
-        # --- End graph update --- 
-
         try:
-            logger.debug("Running Saliency Analysis...")
-            explanation['saliency'] = self.saliency_analyzer.analyze(target_nodes=evidence_nodes)
+            # Handle error cases
+            if not query_result:
+                return {"error": "Empty query result"}
+            
+            if "status" in query_result and query_result["status"] == "error":
+                return {"error": query_result.get("error", "Unknown error")}
+            
+            # Extract entities from the query result
+            entities = []
+            
+            # Get data from the result
+            data = query_result.get("data", {})
+            
+            # Extract entities from data
+            if "entities" in data:
+                entities.extend(data["entities"])
+            
+            # Extract entities from evidence if present
+            if "evidence" in data:
+                for evidence in data["evidence"]:
+                    if evidence.get("type") == "entity" and "id" in evidence:
+                        entities.append(evidence["id"])
+                    elif evidence.get("type") == "relationship":
+                        if "source" in evidence:
+                            entities.append(evidence["source"])
+                        if "target" in evidence:
+                            entities.append(evidence["target"])
+            
+            # Remove duplicates and empty strings
+            entities = list(set(filter(None, entities)))
+            
+            # Get saliency analysis for the involved entities
+            saliency = self.saliency_analyzer.analyze(target_nodes=entities)
+            
+            # Get counterfactual explanations
+            counterfactuals = self.counterfactual_explainer.generate_counterfactuals(
+                query=query_result.get("query", ""),
+                result=query_result,
+                num_alternatives=3
+            )
+            
+            return {
+                "saliency": saliency,
+                "counterfactuals": counterfactuals
+            }
+            
         except Exception as e:
-            logger.error(f"Saliency analysis failed: {e}", exc_info=True)
-            explanation['saliency'] = {"error": str(e)}
-
-        try:
-            logger.debug("Running Feature Importance Analysis...")
-            explanation['feature_importance'] = self.feature_analyzer.analyze(entity_ids=evidence_nodes)
-        except Exception as e:
-            logger.error(f"Feature importance analysis failed: {e}", exc_info=True)
-            explanation['feature_importance'] = {"error": str(e)}
-
-        # Placeholder for counterfactuals and rules
-        logger.debug("Generating placeholder Counterfactuals and Rules...")
-        explanation['counterfactuals'] = self.suggest_counterfactuals(query_result)
-        explanation['rules'] = self.extract_rules(evidence_nodes, evidence_edges)
-
-        logger.info("Explanation generation complete.")
-        return explanation
+            logger.error(f"Error generating explanation: {str(e)}")
+            return {
+                "error": str(e)
+            }
 
     def explain_entity(self, entity_id: str) -> Dict[str, Any]:
         """Generates explanations focused on a specific entity.
@@ -129,7 +133,7 @@ class GraphExplainer:
         # Add other relevant explanations for a single entity if needed
         return explanation
 
-    def suggest_counterfactuals(self, query_result: QueryResult) -> List[Dict[str, Any]]:
+    def suggest_counterfactuals(self, query_result: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Suggests counterfactual changes that might alter the query result (Placeholder).
         
         Args:
