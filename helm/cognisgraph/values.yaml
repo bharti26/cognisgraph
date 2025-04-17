@@ -1,0 +1,62 @@
+global:
+  environment: production
+
+config:
+  logLevel: "INFO"
+  debug: "false"
+  cacheDir: "/tmp/cognisgraph/cache"
+  modelPath: "/app/models"
+  api:
+    host: "0.0.0.0"
+    port: "8000"
+    workers: "4"
+    timeout: "60"
+  ui:
+    port: "8501"
+    address: "0.0.0.0"
+    headless: "true"
+    enableCors: "false"
+    enableXsrfProtection: "true"
+    maxUploadSize: "200"
+
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+  hosts:
+    - host: cognisgraph.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    enabled: true
+    secretName: cognisgraph-tls
+
+persistence:
+  enabled: true
+  size: 10Gi
+  storageClass: "standard"
+
+resources:
+  api:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  ui:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+serviceAccount:
+  create: true
+  annotations: {}
+
+# ... existing code ... 

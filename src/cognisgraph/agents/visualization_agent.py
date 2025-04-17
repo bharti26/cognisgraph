@@ -332,7 +332,8 @@ class VisualizationAgent(BaseAgent[nx.Graph]):
                     status="success",
                     data={
                         "figure": fig,
-                        "graph_info": graph_metrics["basic"]
+                        "graph_info": graph_metrics["basic"],
+                        "graph": G  # Add the NetworkX graph object
                     },
                     metrics=graph_metrics,
                     explanation=explanation
