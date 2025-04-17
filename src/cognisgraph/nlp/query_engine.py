@@ -171,12 +171,32 @@ class QueryEngine:
                     "betweenness_centrality": nx.betweenness_centrality(graph).get(node, 0.0),
                     "closeness_centrality": nx.closeness_centrality(graph).get(node, 0.0)
                 }
-                # Try eigenvector centrality with fallback
+                
+                # Try eigenvector centrality with progressive fallback
                 try:
-                    centrality_scores[node]["eigenvector_centrality"] = nx.eigenvector_centrality(graph).get(node, 0.0)
+                    # First attempt with standard parameters
+                    centrality_scores[node]["eigenvector_centrality"] = nx.eigenvector_centrality(
+                        graph, max_iter=1000, tol=1e-6
+                    ).get(node, 0.0)
                 except nx.PowerIterationFailedConvergence:
-                    centrality_scores[node]["eigenvector_centrality"] = 0.0
-                    logger.warning(f"Eigenvector centrality failed to converge for node {node}, using fallback value")
+                    try:
+                        # Second attempt with more iterations and relaxed tolerance
+                        centrality_scores[node]["eigenvector_centrality"] = nx.eigenvector_centrality(
+                            graph, max_iter=2000, tol=1e-4
+                        ).get(node, 0.0)
+                    except nx.PowerIterationFailedConvergence:
+                        try:
+                            # Third attempt with even more relaxed parameters
+                            centrality_scores[node]["eigenvector_centrality"] = nx.eigenvector_centrality(
+                                graph, max_iter=5000, tol=1e-3
+                            ).get(node, 0.0)
+                        except nx.PowerIterationFailedConvergence:
+                            # Final fallback: weighted combination of degree and PageRank
+                            logger.warning(f"Eigenvector centrality failed to converge for node {node}, using weighted fallback")
+                            degree_centrality = nx.degree_centrality(graph).get(node, 0.0)
+                            pagerank = nx.pagerank(graph).get(node, 0.0)
+                            # Weighted combination: 60% PageRank, 40% degree centrality
+                            centrality_scores[node]["eigenvector_centrality"] = 0.6 * pagerank + 0.4 * degree_centrality
             
             # Format response
             return {

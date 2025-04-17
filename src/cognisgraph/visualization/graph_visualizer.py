@@ -7,6 +7,7 @@ import graphviz
 import logging
 import numpy as np
 from PIL import Image
+import streamlit as st
 
 logger = logging.getLogger(__name__)
 

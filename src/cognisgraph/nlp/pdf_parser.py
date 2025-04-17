@@ -89,10 +89,10 @@ class PDFParser:
                 entities, relationships = self.entity_extractor.extract(text)
                 
                 # Always add a document entity
-                if not any(e["type"] == "document" for e in entities):
+                if not any(e["type"] == "Document" for e in entities):
                     entities.append({
                         "id": "doc1",
-                        "type": "document",
+                        "type": "Document",
                         "properties": {
                             "title": "Document",
                             "content": text[:1000] + "..." if len(text) > 1000 else text

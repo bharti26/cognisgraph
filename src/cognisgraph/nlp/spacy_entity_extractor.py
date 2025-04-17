@@ -35,29 +35,27 @@ class SpacyEntityExtractor:
             # Process text with spaCy
             doc = self.nlp(text)
             
-            # Extract entities
-            entities = []
+            # Always add a document entity first
+            entities = [{
+                "id": "doc1",
+                "type": "Document",
+                "properties": {
+                    "name": "Document",
+                    "text": text[:100] + "..." if len(text) > 100 else text
+                }
+            }]
+            
+            # Extract other entities
             for ent in doc.ents:
                 entities.append({
                     "id": f"ent_{len(entities)}",
-                    "type": ent.label_,
+                    "type": self._map_entity_type(ent.label_),
                     "properties": {
                         "name": ent.text,
                         "start": ent.start_char,
                         "end": ent.end_char
                     }
                 })
-            
-            # Always add a document entity
-            doc_entity = {
-                "id": "doc1",
-                "type": "document",
-                "properties": {
-                    "name": "Document",
-                    "text": text[:100] + "..." if len(text) > 100 else text
-                }
-            }
-            entities.append(doc_entity)
             
             # Extract relationships (simple co-occurrence based)
             relationships = []
@@ -66,8 +64,8 @@ class SpacyEntityExtractor:
                     # Check if entities are in the same sentence
                     if ent1.sent == ent2.sent:
                         relationships.append({
-                            "source": f"ent_{i}",
-                            "target": f"ent_{j}",
+                            "source": f"ent_{i+1}",  # +1 because of doc entity
+                            "target": f"ent_{j+1}",  # +1 because of doc entity
                             "type": "RELATED_TO",
                             "properties": {
                                 "sentence": ent1.sent.text
@@ -78,7 +76,7 @@ class SpacyEntityExtractor:
             for i, ent in enumerate(doc.ents):
                 relationships.append({
                     "source": "doc1",
-                    "target": f"ent_{i}",
+                    "target": f"ent_{i+1}",  # +1 because of doc entity
                     "type": "CONTAINS",
                     "properties": {
                         "sentence": ent.sent.text
@@ -92,7 +90,7 @@ class SpacyEntityExtractor:
             # Return at least a document entity even in case of error
             return [{
                 "id": "doc1",
-                "type": "document",
+                "type": "Document",
                 "properties": {
                     "name": "Document",
                     "text": text[:100] + "..." if len(text) > 100 else text
@@ -101,23 +99,28 @@ class SpacyEntityExtractor:
     
     def _map_entity_type(self, spacy_type: str) -> str:
         """Map spaCy entity types to our entity types."""
-        type_map = {
-            "PERSON": "person",
-            "ORG": "organization",
-            "GPE": "location",
-            "LOC": "location",
-            "DATE": "date",
-            "TIME": "time",
-            "MONEY": "money",
-            "PERCENT": "percentage",
-            "PRODUCT": "product",
-            "EVENT": "event",
-            "WORK_OF_ART": "work_of_art",
-            "LAW": "law",
-            "LANGUAGE": "language",
-            "NORP": "group"  # Nationalities, religious or political groups
+        mapping = {
+            "PERSON": "Person",
+            "ORG": "Organization",
+            "GPE": "Location",
+            "LOC": "Location",
+            "DATE": "Date",
+            "TIME": "Time",
+            "MONEY": "Money",
+            "PERCENT": "Percentage",
+            "QUANTITY": "Quantity",
+            "CARDINAL": "Number",
+            "ORDINAL": "Number",
+            "NORP": "Group",
+            "FAC": "Facility",
+            "PRODUCT": "Product",
+            "EVENT": "Event",
+            "WORK_OF_ART": "Artifact",
+            "LAW": "Law",
+            "LANGUAGE": "Language",
+            "MISC": "Miscellaneous"
         }
-        return type_map.get(spacy_type, "unknown")
+        return mapping.get(spacy_type, "Miscellaneous")
     
     def _map_relationship_type(self, dep_type: str) -> str:
         """Map dependency types to relationship types."""

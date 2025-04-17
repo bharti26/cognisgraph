@@ -21,18 +21,25 @@ config:
 
 ingress:
   enabled: true
-  className: "nginx"
+  className: nginx
   annotations:
-    kubernetes.io/ingress.class: nginx
-    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
   hosts:
     - host: cognisgraph.example.com
       paths:
+        - path: /api
+          pathType: Prefix
+          service: api
+          port: 8000
         - path: /
           pathType: Prefix
+          service: ui
+          port: 8501
   tls:
-    enabled: true
-    secretName: cognisgraph-tls
+    - secretName: cognisgraph-tls
+      hosts:
+        - cognisgraph.example.com
 
 persistence:
   enabled: true
